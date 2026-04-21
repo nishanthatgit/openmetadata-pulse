@@ -1,0 +1,52 @@
+name: Auto Assign PR Reviewer
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+jobs:
+  assign-reviewer:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - name: Assign reviewer based on PR author
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const reviewerMap = {
+              'Igrock007':      'nishanthatgit',
+              'nishanthatgit':  'Chellammal-K',
+              'Chellammal-K':   'pknaveenece',
+              'pknaveenece':    'Igrock007',
+            };
+
+            const prAuthor = context.payload.pull_request.user.login;
+            const reviewer = reviewerMap[prAuthor];
+
+            if (!reviewer) {
+              console.log(`No reviewer mapping for author: ${prAuthor}`);
+              return;
+            }
+
+            if (prAuthor === reviewer) {
+              console.log('Author and reviewer are the same, skipping.');
+              return;
+            }
+
+            console.log(`Assigning reviewer ${reviewer} for PR by ${prAuthor}`);
+
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              reviewers: [reviewer],
+            });
+
+            // Also add a comment for visibility
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `👋 Auto-assigned @${reviewer} as reviewer (per team rotation).`,
+            });
