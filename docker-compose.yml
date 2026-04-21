@@ -1,0 +1,30 @@
+# OpenMetadata Pulse — development stack
+version: "3.9"
+
+services:
+  # OpenMetadata (use official image)
+  openmetadata:
+    image: openmetadata/server:latest
+    ports:
+      - "8585:8585"
+    environment:
+      - OPENMETADATA_CLUSTER_NAME=openmetadata
+    restart: unless-stopped
+
+  # Pulse API server (webhook receiver + dashboard API)
+  pulse-api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      - openmetadata
+    command: python -m pulse.server
+
+  # Pulse Slack bot
+  pulse-bot:
+    build: .
+    env_file: .env
+    depends_on:
+      - openmetadata
+    command: python -m pulse.bot
