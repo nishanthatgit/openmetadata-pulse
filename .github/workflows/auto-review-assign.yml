@@ -15,10 +15,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const reviewerMap = {
-              'Igrock007':      'nishanthatgit',
+              'Lgrock007':      'nishanthatgit',
               'nishanthatgit':  'Chellammal-K',
               'Chellammal-K':   'pknaveenece',
-              'pknaveenece':    'Igrock007',
+              'pknaveenece':    'Lgrock007',
             };
 
             const prAuthor = context.payload.pull_request.user.login;
