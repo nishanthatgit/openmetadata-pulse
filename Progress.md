@@ -110,10 +110,13 @@ Per-person, per-phase progress on every task in [TaskSync.md](./TaskSync.md). On
 
 | Task ID | Description                                           | Issue | PR  | P   | B   | V1  | F   | V2  | PR  | R   | M   |
 | ------- | ----------------------------------------------------- | ----- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1-16   | Write project README.md (1-liner, features, setup)    |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-17   | Add AI disclosure to README                           |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-18   | Daily monitor unassigned hackathon GFIs               |       | n/a | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| P1-16   | Write project README.md (1-liner, features, setup)    | 18    | 32  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
+| P1-17   | Add AI disclosure to README                           | 19    | 34  | [x] | [x] | [x] | [ ] | [ ] | [x] | [ ] | [ ] |
+| P1-18   | Daily monitor unassigned hackathon GFIs               | 20    | n/a | [x] | [x] | [x] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-19   | Draft demo narrative outline                          |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+**GFI Tracking (P1-18)**
+- 2026-04-22: Found unassigned hackathon GFI: #27482, #27444, #26712. Team notified in Slack.
 
 ### Phase 1 Exit Gate
 
