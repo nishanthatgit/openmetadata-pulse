@@ -71,7 +71,7 @@ We'll link the final submission + demo video before the Apr 26 deadline.
   ```
 - [ ] `P1-03` Implement `om_client.py`: connect to OM MCP, wrap `search_metadata` + `get_entity_details`
 - [ ] `P1-04` Implement `bot.py`: Slack bolt app, register `/pulse` slash command, health check response
-- [ ] `P1-05` Verify: `/pulse health` in Slack returns "Pulse is alive, connected to OM at :8585"
+- [x] `P1-05` Verify: `/pulse health` in Slack returns "Pulse is alive, connected to OM at :8585"
 - [ ] `P1-06` Review all Phase 1 PRs
 
 ### DD-CHK (@Chellammal-K) — Senior Builder

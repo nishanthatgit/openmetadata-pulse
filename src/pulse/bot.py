@@ -106,19 +106,10 @@ def _health_check() -> str:
             results = asyncio.run(search_metadata("*", limit=1))
 
         logger.info("health_check_success", om_url=settings.om_server_url, hits=len(results))
-        return (
-            f":white_check_mark: *Pulse is healthy!*\n"
-            f"• Connected to OpenMetadata at `{settings.om_server_url}`\n"
-            f"• Search API responding — {len(results)} result(s) returned"
-        )
+        return f"✅ Pulse is alive, connected to OM at `{settings.om_server_url}`"
     except Exception as exc:
         logger.error("health_check_failed", om_url=settings.om_server_url, error=str(exc))
-        return (
-            f":x: *OM connectivity issue*\n"
-            f"• Cannot reach OpenMetadata at `{settings.om_server_url}`\n"
-            f"• Error: `{exc!s}`\n"
-            f"• Check that OM is running and `OM_SERVER_URL` / `OM_API_TOKEN` are correct."
-        )
+        return f"❌ Cannot reach OpenMetadata at `{settings.om_server_url}`"
 
 
 def _handle_ask(respond, args: str) -> None:  # noqa: ANN001

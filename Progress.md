@@ -84,7 +84,7 @@ Per-person, per-phase progress on every task in [TaskSync.md](./TaskSync.md). On
 | P1-02   | Create project structure (`src/pulse/...`, `ui/`, `tests/`)|       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-03   | Implement `om_client.py`: MCP wrapper for search + details |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-04   | Implement `bot.py`: Slack bolt app + `/pulse` command      | 6     | 27  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
-| P1-05   | Verify `/pulse health` works in Slack                      |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| P1-05   | Verify `/pulse health` works in Slack                      | 7     |     | [x] | [x] | [x] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-06   | Review all Phase 1 PRs                                     |       | n/a | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 
 ### @Chellammal-K
