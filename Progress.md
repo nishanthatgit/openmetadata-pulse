@@ -83,7 +83,7 @@ Per-person, per-phase progress on every task in [TaskSync.md](./TaskSync.md). On
 | P1-01   | Init repo with `pyproject.toml` and Phase 1 deps           |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-02   | Create project structure (`src/pulse/...`, `ui/`, `tests/`)|       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-03   | Implement `om_client.py`: MCP wrapper for search + details |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-04   | Implement `bot.py`: Slack bolt app + `/pulse` command      |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| P1-04   | Implement `bot.py`: Slack bolt app + `/pulse` command      | 6     | 27  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
 | P1-05   | Verify `/pulse health` works in Slack                      |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P1-06   | Review all Phase 1 PRs                                     |       | n/a | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 
@@ -100,11 +100,11 @@ Per-person, per-phase progress on every task in [TaskSync.md](./TaskSync.md). On
 
 | Task ID | Description                                           | Issue | PR  | P   | B   | V1  | F   | V2  | PR  | R   | M   |
 | ------- | ----------------------------------------------------- | ----- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1-11   | Local OM at `:8585` via Docker                        |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-12   | Configure OM webhook → `localhost:8000/webhook`       |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-13   | Pre-seed OM with 50+ tables (tiers, owners, tags)     |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-14   | Scaffold React dashboard (Vite + React + Recharts)    |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
-| P1-15   | Document setup in README.md (Slack + OM in < 5 min)   |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| P1-11   | Local OM at `:8585` via Docker                        | 13    | 28  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
+| P1-12   | Configure OM webhook → `localhost:8000/webhook`       | 14    | 29  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
+| P1-13   | Pre-seed OM with 50+ tables (tiers, owners, tags)     | 15    | 30  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
+| P1-14   | Scaffold React dashboard (Vite + React + Recharts)    | 16    | 31  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
+| P1-15   | Document setup in README.md (Slack + OM in < 5 min)   | 17    | 32  | [x] | [x] | [x] | [ ] | [ ] | [x] | [x] | [x] |
 
 ### @pknaveenece
 
