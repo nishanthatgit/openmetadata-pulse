@@ -17,6 +17,7 @@ from typing import Any
 
 import httpx
 import structlog
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from pulse.config import settings
 from pulse.exceptions import (
@@ -25,6 +26,7 @@ from pulse.exceptions import (
     OMConnectionError,
     OMNotFoundError,
 )
+from pulse.resilience import om_breaker
 
 logger = structlog.get_logger(__name__)
 
@@ -34,7 +36,7 @@ logger = structlog.get_logger(__name__)
 _TIMEOUT = httpx.Timeout(connect=5.0, read=15.0, write=10.0, pool=5.0)
 _MAX_RETRIES = 3
 _RETRY_BACKOFF_BASE = 0.5  # seconds
-_RETRYABLE_STATUS_CODES = {502, 503, 504}
+_RETRYABLE_STATUS_CODES = {429, 502, 503, 504}
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +69,22 @@ def _raise_for_status(response: httpx.Response, url: str) -> None:
     raise OMClientError(detail, status_code=code, url=url)
 
 
+def _is_retryable_om_error(exc: BaseException) -> bool:
+    """Determine if an exception should trigger a retry."""
+    if isinstance(exc, OMConnectionError):
+        return True
+    if isinstance(exc, OMClientError) and exc.status_code in _RETRYABLE_STATUS_CODES:
+        return True
+    return False
+
+
+@om_breaker
+@retry(
+    stop=stop_after_attempt(_MAX_RETRIES),
+    wait=wait_exponential(multiplier=_RETRY_BACKOFF_BASE, min=1, max=10),
+    retry=retry_if_exception(_is_retryable_om_error),
+    reraise=True,
+)
 async def _request_with_retry(
     method: str,
     url: str,
@@ -74,57 +92,27 @@ async def _request_with_retry(
     params: dict[str, Any] | None = None,
     json_body: dict[str, Any] | None = None,
 ) -> httpx.Response:
-    """Execute an HTTP request with exponential-backoff retry on transient errors."""
-    last_exc: Exception | None = None
-
-    for attempt in range(1, _MAX_RETRIES + 1):
-        try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-                response = await client.request(
-                    method,
-                    url,
-                    headers=_auth_headers(),
-                    params=params,
-                    json=json_body,
-                )
-
-            if response.status_code not in _RETRYABLE_STATUS_CODES:
-                _raise_for_status(response, url)
-                return response
-
-            last_exc = OMClientError(
-                response.text[:500],
-                status_code=response.status_code,
-                url=url,
-            )
-            logger.warning(
-                "om_request_retryable",
-                attempt=attempt,
-                status=response.status_code,
-                url=url,
+    """Execute an HTTP request with exponential-backoff retry and a circuit breaker."""
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            response = await client.request(
+                method,
+                url,
+                headers=_auth_headers(),
+                params=params,
+                json=json_body,
             )
 
-        except httpx.ConnectError as exc:
-            last_exc = OMConnectionError(
-                f"Cannot connect to OpenMetadata at {url}: {exc}",
-                url=url,
-            )
-            logger.warning("om_connect_error", attempt=attempt, url=url, error=str(exc))
+        _raise_for_status(response, url)
+        return response
 
-        except httpx.TimeoutException as exc:
-            last_exc = OMConnectionError(
-                f"Timeout connecting to OpenMetadata at {url}: {exc}",
-                url=url,
-            )
-            logger.warning("om_timeout", attempt=attempt, url=url, error=str(exc))
+    except httpx.ConnectError as exc:
+        logger.warning("om_connect_error", url=url, error=str(exc))
+        raise OMConnectionError(f"Cannot connect to OpenMetadata at {url}: {exc}", url=url) from exc
 
-        if attempt < _MAX_RETRIES:
-            wait = _RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
-            await asyncio.sleep(wait)
-
-    # All retries exhausted
-    assert last_exc is not None
-    raise last_exc
+    except httpx.TimeoutException as exc:
+        logger.warning("om_timeout", url=url, error=str(exc))
+        raise OMConnectionError(f"Timeout connecting to OpenMetadata at {url}: {exc}", url=url) from exc
 
 
 # ---------------------------------------------------------------------------
