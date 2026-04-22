@@ -7,11 +7,33 @@ from typing import Any
 import structlog
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from pulse.config import settings
+from pulse.resilience import error_envelope, is_retryable_slack_error, slack_breaker
 from pulse.templates import EVENT_EMOJI, _humanize_event_type, route_payload_to_template
 
 logger = structlog.get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# Resilient Helpers
+# ---------------------------------------------------------------------------
+
+@slack_breaker
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=0.5, min=1, max=10),
+    retry=retry_if_exception(is_retryable_slack_error),
+    reraise=True,
+)
+def _post_slack_message(
+    client: WebClient,
+    channel: str,
+    blocks: list[dict[str, Any]],
+    text: str,
+) -> None:
+    client.chat_postMessage(channel=channel, blocks=blocks, text=text)
+
 
 # ---------------------------------------------------------------------------
 # Slack client (lazy — only created when a valid token is configured)
@@ -70,11 +92,7 @@ async def dispatch_event(payload: dict[str, Any]) -> None:
     channel = settings.slack_default_channel
 
     try:
-        client.chat_postMessage(
-            channel=channel,
-            blocks=blocks,
-            text=fallback_text,
-        )
+        _post_slack_message(client, channel, blocks, fallback_text)
         logger.info(
             "slack_message_posted",
             channel=channel,
@@ -82,11 +100,19 @@ async def dispatch_event(payload: dict[str, Any]) -> None:
             fqn=entity_fqn,
         )
     except SlackApiError as exc:
-        logger.error(
-            "slack_post_failed",
+        error_envelope(
+            "slack_dispatch",
+            exc,
             channel=channel,
             event_type=event_type,
             fqn=entity_fqn,
-            error=str(exc),
             response=str(exc.response.data) if exc.response else None,
+        )
+    except Exception as exc:
+        error_envelope(
+            "slack_dispatch",
+            exc,
+            channel=channel,
+            event_type=event_type,
+            fqn=entity_fqn,
         )

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
 from pulse.notifier import dispatch_event
+from pulse.resilience import error_envelope
 
 logger = structlog.get_logger(__name__)
 
@@ -76,5 +77,18 @@ async def receive_webhook(request: Request) -> dict[str, str]:
         fqn=event.entityFullyQualifiedName,
     )
 
-    await dispatch_event(event.model_dump())
+    try:
+        await dispatch_event(event.model_dump())
+    except Exception as exc:
+        error_envelope(
+            "webhook_processing",
+            exc,
+            event_type=event.eventType,
+            fqn=event.entityFullyQualifiedName,
+        )
+        return JSONResponse(  # type: ignore[return-value]
+            status_code=500,
+            content={"detail": "Internal server error during dispatch"},
+        )
+
     return {"status": "ok"}
