@@ -101,15 +101,14 @@ class TestHealthCheck:
             mock_search.return_value = [{"_source": {"name": "test"}}]
             result = _health_check()
 
-        assert "healthy" in result.lower() or "check_mark" in result
-        assert "1 result" in result
+        assert "✅ Pulse is alive" in result
 
     def test_unhealthy_response(self):
         with patch("pulse.bot.search_metadata", new_callable=AsyncMock) as mock_search:
             mock_search.side_effect = ConnectionError("Connection refused")
             result = _health_check()
 
-        assert "connectivity issue" in result.lower() or ":x:" in result
+        assert "❌ Cannot reach OpenMetadata" in result
 
 
 class TestAskHandler:
