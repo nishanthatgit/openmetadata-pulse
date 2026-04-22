@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     slack_bot_token: str = ""
     slack_app_token: str = ""
     slack_signing_secret: str = ""
+    slack_default_channel: str = "#openmetadata-events"
 
     # OpenAI
     openai_api_key: str = ""
