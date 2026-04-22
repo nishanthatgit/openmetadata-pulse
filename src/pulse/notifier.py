@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-from datetime import datetime, timezone
 from typing import Any
 
 import structlog
@@ -11,6 +9,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from pulse.config import settings
+from pulse.templates import EVENT_EMOJI, _humanize_event_type, route_payload_to_template
 
 logger = structlog.get_logger(__name__)
 
@@ -30,111 +29,6 @@ def _get_slack_client() -> WebClient | None:
         _slack_client = WebClient(token=settings.slack_bot_token)
         return _slack_client
     return None
-
-
-# ---------------------------------------------------------------------------
-# Event type → emoji mapping
-# ---------------------------------------------------------------------------
-
-EVENT_EMOJI: dict[str, str] = {
-    "entityCreated": ":new:",
-    "entityUpdated": ":pencil2:",
-    "entityDeleted": ":wastebasket:",
-    "entitySoftDeleted": ":ghost:",
-    "testCaseResult": ":test_tube:",
-}
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _humanize_event_type(event_type: str) -> str:
-    """Convert camelCase event type to a human-readable title.
-
-    Example: ``entityCreated`` → ``Entity Created``
-    """
-    # Insert a space before each uppercase letter, then title-case
-    spaced = re.sub(r"([A-Z])", r" \1", event_type).strip()
-    return spaced.title()
-
-
-def _build_om_url(entity_type: str, fqn: str) -> str:
-    """Construct a deep-link URL to an entity in the OpenMetadata UI."""
-    base = settings.om_server_url.rstrip("/")
-    return f"{base}/{entity_type}/{fqn}"
-
-
-# ---------------------------------------------------------------------------
-# Block Kit builder
-# ---------------------------------------------------------------------------
-
-
-def _format_slack_blocks(
-    emoji: str, event_type: str, entity_type: str, fqn: str
-) -> list[dict[str, Any]]:
-    """Build rich Slack Block Kit blocks for a change event.
-
-    Layout:
-        1. Header  — emoji + human-readable event title
-        2. Section — entity details with clickable OM deep-link
-        3. Context — timestamp + event-type badge
-        4. Actions — "View in OpenMetadata" button
-    """
-    human_event = _humanize_event_type(event_type)
-    om_url = _build_om_url(entity_type, fqn)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-
-    blocks: list[dict[str, Any]] = [
-        # 1. Header
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": f"{emoji} {human_event}",
-                "emoji": True,
-            },
-        },
-        # 2. Section — entity info with deep-link
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"*Entity Type:* `{entity_type}`\n"
-                    f"*FQN:* <{om_url}|{fqn}>"
-                ),
-            },
-        },
-        # 3. Context — timestamp + badge
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": f":clock1: {now}  |  `{event_type}`",
-                },
-            ],
-        },
-        # 4. Actions — View in OM button
-        {
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "View in OpenMetadata",
-                        "emoji": True,
-                    },
-                    "url": om_url,
-                    "action_id": "view_in_om",
-                },
-            ],
-        },
-    ]
-
-    return blocks
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +54,7 @@ async def dispatch_event(payload: dict[str, Any]) -> None:
         fqn=entity_fqn,
     )
 
-    blocks = _format_slack_blocks(emoji, event_type, entity_type, entity_fqn)
+    blocks = route_payload_to_template(payload)
     fallback_text = f"{emoji} {_humanize_event_type(event_type)} on {entity_type}: {entity_fqn}"
 
     client = _get_slack_client()
