@@ -157,7 +157,7 @@ Per-person, per-phase progress on every task in [TaskSync.md](./TaskSync.md). On
 
 | Task ID | Description                                                      | Issue | PR  | P   | B   | V1  | F   | V2  | PR  | R   | M   |
 | ------- | ---------------------------------------------------------------- | ----- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P2-06   | Smart routing: event → owner lookup → route to owner's DM/channel|       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| P2-06   | Smart routing: event → owner lookup → route to owner's DM/channel| 48    |     | [x] | [x] | [x] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P2-07   | Rich Slack Blocks: schema diff, DQ cards, approval deep-links   |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P2-08   | Event filtering: configurable rules (Tier-1 only, skip bots)    |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 | P2-09   | Error handling: retry + circuit breaker + error envelope         |       |     | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
