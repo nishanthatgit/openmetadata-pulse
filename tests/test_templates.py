@@ -113,7 +113,7 @@ def test_template_dq_failure(base_payload):
     blocks = template_dq_failure(payload)
     
     custom_section = blocks[2]
-    assert "Failed" in custom_section["fields"][0]["text"]
+    assert "🔴 `Failed`" in custom_section["fields"][0]["text"]
     assert "Found 5 nulls" in custom_section["fields"][1]["text"]
 
 def test_template_dq_failure_missing_fields(base_payload):
@@ -121,7 +121,7 @@ def test_template_dq_failure_missing_fields(base_payload):
     blocks = template_dq_failure(payload)
     
     custom_section = blocks[2]
-    assert "Failed" in custom_section["fields"][0]["text"]
+    assert "🔴 `Failed`" in custom_section["fields"][0]["text"]
     assert "N/A" in custom_section["fields"][1]["text"]
 
 def test_template_ownership_change(base_payload):
@@ -167,7 +167,7 @@ def test_template_schema_change(base_payload):
     
     custom_section = blocks[2]
     assert "Added:" in custom_section["text"]["text"]
-    assert "new_col" in custom_section["text"]["text"]
+    assert "```[{\"name\": \"new_col\"}]```" in custom_section["text"]["text"]
 
 def test_template_schema_change_missing_fields(base_payload):
     payload = {
@@ -181,7 +181,31 @@ def test_template_schema_change_missing_fields(base_payload):
     }
     blocks = template_schema_change(payload)
     assert "Added:" in blocks[2]["text"]["text"]
-    assert "[]" in blocks[2]["text"]["text"]
+    assert "```[]```" in blocks[2]["text"]["text"]
+
+def test_template_task_approval(base_payload):
+    payload = {
+        **base_payload,
+        "eventType": "taskCreated",
+        "entityType": "task",
+        "entityFullyQualifiedName": "sample.task",
+        "entity": {"id": "task-123"}
+    }
+    with patch("pulse.templates.settings") as mock_settings:
+        mock_settings.om_server_url = "http://localhost:8585/"
+        blocks = template_task_approval(payload)
+
+    # 4 blocks: header, section, context, actions
+    assert len(blocks) == 4
+    actions = blocks[3]
+    assert actions["type"] == "actions"
+    assert len(actions["elements"]) == 3
+    
+    assert actions["elements"][0]["text"]["text"] == "Approve"
+    assert actions["elements"][0]["url"] == "http://localhost:8585/tasks/task-123"
+    
+    assert actions["elements"][1]["text"]["text"] == "Reject"
+    assert actions["elements"][2]["text"]["text"] == "View Task"
 
 # ---------------------------------------------------------------------------
 # Router
@@ -191,6 +215,14 @@ def test_route_payload_entity_created():
     payload = {"eventType": "entityCreated"}
     blocks = route_payload_to_template(payload)
     assert len(blocks) == 5 # Should use template_entity_created
+
+def test_route_payload_task_created():
+    payload = {"eventType": "taskCreated"}
+    blocks = route_payload_to_template(payload)
+    # Task approval template has 4 blocks
+    assert len(blocks) == 4
+    assert blocks[3]["type"] == "actions"
+    assert len(blocks[3]["elements"]) == 3
 
 def test_route_payload_entity_deleted():
     payload = {"eventType": "entityDeleted"}

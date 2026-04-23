@@ -19,6 +19,7 @@ EVENT_EMOJI: dict[str, str] = {
     "entityDeleted": ":wastebasket:",
     "entitySoftDeleted": ":ghost:",
     "testCaseResult": ":test_tube:",
+    "taskCreated": ":clipboard:",
 }
 
 # ---------------------------------------------------------------------------
@@ -132,7 +133,7 @@ def template_schema_change(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 old_str = str(old_val)[:500]
                 new_str = str(new_val)[:500]
                 
-                diff_text += f"*{change_type.replace('fields', '')}:*\n`Old:` {old_str}\n`New:` {new_str}\n\n"
+                diff_text += f"*{change_type.replace('fields', '')}:*\n*Old:*\n```{old_str}```\n*New:*\n```{new_str}```\n\n"
 
     if diff_text:
         blocks.insert(2, {
@@ -156,10 +157,12 @@ def template_dq_failure(payload: dict[str, Any]) -> list[dict[str, Any]]:
     status = test_case_res.get("testCaseStatus", "Failed")
     result_str = test_case_res.get("result", "N/A")
     
+    status_emoji = "🔴" if status == "Failed" else "🟢" if status == "Success" else "🟡"
+    
     blocks.insert(2, {
         "type": "section",
         "fields": [
-            {"type": "mrkdwn", "text": f"*Status:*\n`{status}`"},
+            {"type": "mrkdwn", "text": f"*Status:*\n{status_emoji} `{status}`"},
             {"type": "mrkdwn", "text": f"*Result:*\n{result_str[:1500]}"},
         ]
     })
@@ -254,6 +257,59 @@ def template_generic(payload: dict[str, Any]) -> list[dict[str, Any]]:
     blocks = _build_base_blocks(emoji, event_type, entity_type, fqn)
     return _append_action_block(blocks, entity_type, fqn)
 
+
+def template_task_approval(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Template for task creation requiring approval."""
+    event_type = payload.get("eventType", "unknown")
+    entity_type = payload.get("entityType", "task")
+    fqn = payload.get("entityFullyQualifiedName", "")
+    emoji = EVENT_EMOJI.get(event_type, ":clipboard:")
+
+    blocks = _build_base_blocks(emoji, event_type, entity_type, fqn)
+    
+    task_id = payload.get("entity", {}).get("id", fqn)
+    om_server = settings.om_server_url.rstrip("/")
+    task_url = f"{om_server}/tasks/{task_id}"
+
+    blocks.append({
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Approve",
+                    "emoji": True,
+                },
+                "style": "primary",
+                "url": task_url,
+                "action_id": "approve_task",
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Reject",
+                    "emoji": True,
+                },
+                "style": "danger",
+                "url": task_url,
+                "action_id": "reject_task",
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "View Task",
+                    "emoji": True,
+                },
+                "url": task_url,
+                "action_id": "view_task",
+            }
+        ],
+    })
+    return blocks
+
 # ---------------------------------------------------------------------------
 # Router
 # ---------------------------------------------------------------------------
@@ -261,6 +317,10 @@ def template_generic(payload: dict[str, Any]) -> list[dict[str, Any]]:
 def route_payload_to_template(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Determine the correct template and generate Slack blocks for the payload."""
     event_type = payload.get("eventType", "unknown")
+    entity_type = payload.get("entityType", "unknown")
+    
+    if event_type == "taskCreated" or entity_type == "task":
+        return template_task_approval(payload)
     
     if event_type == "entityCreated":
         return template_entity_created(payload)
