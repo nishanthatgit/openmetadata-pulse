@@ -124,7 +124,7 @@ We'll link the final submission + demo video before the Apr 26 deadline.
 - [ ] `P2-07` **Rich Slack Blocks**: schema diff view, DQ test result cards, governance approval buttons (Approve/Reject deep-link to OM UI)
 - [ ] `P2-08` **Event Filtering**: configurable rules (e.g., "only notify on Tier-1 table changes", "skip bot-generated events")
 - [ ] `P2-09` Error handling: retry on Slack API failures, structured error envelope, circuit breaker on OM calls
-- [ ] `P2-10` Integration tests: webhook → notifier → mock Slack API
+- [x] `P2-10` Integration tests: webhook → notifier → mock Slack API
 
 ### DD-IGR (@lgrock007)
 
