@@ -226,38 +226,79 @@ mypy src/
 
 ```mermaid
 graph TB
-    subgraph Slack["💬 Slack Workspace"]
+    subgraph TB_SLACK["🔒 Trust Boundary: Slack Workspace"]
         U["👤 Data Team User"]
-        SC["📢 Slack Channel"]
+        SC["📢 #data-alerts Channel"]
+        DM["✉️ Owner DM"]
     end
 
-    subgraph Pulse["🫀 OpenMetadata Pulse"]
-        SB["🤖 Slack Bot<br/>slack-bolt"]
-        AI["🧠 AI Query Engine<br/>GPT-4o-mini + LangChain"]
-        WH["📥 Webhook Receiver<br/>FastAPI"]
-        NE["🔔 Notification Engine<br/>Smart Router"]
-        API["📊 Dashboard API<br/>FastAPI + SSE"]
+    subgraph TB_PULSE["🔒 Trust Boundary: Pulse Backend (localhost:8000)"]
+        SB["🤖 Slack Bot<br/>slack-bolt · Socket Mode"]
+        AI["🧠 AI Query Engine<br/>GPT-4o-mini · LangChain · MCP"]
+        WH["📥 Webhook Receiver<br/>FastAPI · POST /webhook"]
+        FE["🔍 Event Filter Engine<br/>Tier / Entity / Owner rules"]
+        NE["🔔 Notification Engine<br/>Smart Router · Circuit Breaker"]
+        TPL["🎨 Template Engine<br/>Slack Block Kit Builder"]
+        API["📊 Dashboard API<br/>FastAPI · REST + SSE"]
     end
 
-    subgraph OM["🔷 OpenMetadata"]
-        MCP["🔧 MCP Server<br/>12 tools"]
-        EVT["⚡ Event System<br/>Webhooks"]
-        SEARCH["🔍 Search API"]
+    subgraph TB_OM["🔒 Trust Boundary: OpenMetadata (localhost:8585)"]
+        MCP["🔧 MCP Server<br/>12 tools · data-ai-sdk"]
+        EVT["⚡ Event System<br/>Webhooks · Change Events"]
+        SEARCH["🔍 Search & Aggregation API"]
+        LINEAGE["🔗 Lineage API"]
     end
 
-    subgraph Dashboard["🖥️ Community Dashboard"]
-        UI["⚛️ React UI<br/>Recharts + SSE"]
+    subgraph TB_DASH["🔒 Trust Boundary: Dashboard UI (localhost:3000)"]
+        UI["⚛️ React + Vite<br/>Recharts · EventSource SSE"]
     end
 
-    U -->|"/pulse ask ..."| SB
-    SB --> AI
-    AI -->|"search_metadata<br/>get_entity_details<br/>get_entity_lineage"| MCP
-    EVT -->|"change events"| WH
-    WH --> NE
-    NE -->|"formatted blocks"| SC
-    API -->|"SSE stream"| UI
+    %% ── Flow 1: PULL — User → Slash Command → MCP → Slack ──
+    U -->|"① /pulse ask · lineage · health"| SB
+    SB -->|"NL query"| AI
+    AI -->|"search_metadata · get_entity_details"| MCP
+    AI -->|"get_entity_lineage"| LINEAGE
+    AI -->|"structured answer"| SB
+    SB -->|"Block Kit response"| SC
+
+    %% ── Flow 2: PUSH — OM Event → Webhook → Slack ──
+    EVT -->|"② POST change event (JSON)"| WH
+    WH -->|"validated payload"| FE
+    FE -->|"passes filter?"| NE
+    NE -->|"select template"| TPL
+    TPL -->|"formatted blocks"| NE
+    NE -->|"owner-routed alert"| DM
+    NE -->|"channel broadcast"| SC
+
+    %% ── Flow 3: SSE — Dashboard ←→ Pulse API ──
+    UI -->|"③ GET /api/stats"| API
     API -->|"aggregations"| SEARCH
+    API -->|"SSE event stream"| UI
+
+    %% Styling
+    classDef trustBoundary fill:#1a1a2e,stroke:#7B61FF,stroke-width:2px,color:#e0e0e0
+    classDef slackNode fill:#4A154B,stroke:#E8DEF8,color:#fff
+    classDef pulseNode fill:#1e3a5f,stroke:#64B5F6,color:#fff
+    classDef omNode fill:#2d1b69,stroke:#7B61FF,color:#fff
+    classDef dashNode fill:#1b5e20,stroke:#81C784,color:#fff
+
+    class TB_SLACK trustBoundary
+    class TB_PULSE trustBoundary
+    class TB_OM trustBoundary
+    class TB_DASH trustBoundary
+    class U,SC,DM slackNode
+    class SB,AI,WH,FE,NE,TPL,API pulseNode
+    class MCP,EVT,SEARCH,LINEAGE omNode
+    class UI dashNode
 ```
+
+### Data Flow Summary
+
+| # | Flow | Path | Trigger |
+|---|------|------|---------|
+| ① | **Pull** (User → Answer) | User → `/pulse` → Bot → AI → MCP → Slack | Slash command |
+| ② | **Push** (Event → Alert) | OM Event → Webhook → Filter → Router → Slack DM/Channel | Schema/DQ/Ownership change |
+| ③ | **SSE** (Live Dashboard) | React UI ← SSE ← Dashboard API ← OM Search | Page load / auto-refresh |
 
 ### How It Works
 
@@ -265,7 +306,7 @@ graph TB
 2. **AI Query Engine** interprets the natural language and selects the right MCP tools
 3. **MCP Server** executes the query against OpenMetadata and returns structured data
 4. **Bot responds** with a rich Slack Block Kit message — sourced, formatted, actionable
-5. **Meanwhile**, OpenMetadata pushes change events → Webhook Receiver → Notification Engine routes alerts to the right owners in Slack
+5. **Meanwhile**, OpenMetadata pushes change events → Webhook Receiver → Filter Engine → Notification Engine routes alerts to the right owners in Slack
 6. **Dashboard** displays live metrics via SSE — ownership, DQ trends, governance status
 
 ---
