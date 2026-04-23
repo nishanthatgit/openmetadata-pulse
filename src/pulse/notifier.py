@@ -54,6 +54,17 @@ def _get_slack_client() -> WebClient | None:
 
 
 # ---------------------------------------------------------------------------
+# Smart Routing Mapping
+# ---------------------------------------------------------------------------
+
+OWNER_SLACK_MAP = {
+    # OM User Name -> Slack Channel / User ID
+    "nishanthatgit": "#data-engineering",
+    "Chellammal-K": "#data-science",
+    "admin": "#admin-alerts",
+}
+
+# ---------------------------------------------------------------------------
 # Main dispatcher
 # ---------------------------------------------------------------------------
 
@@ -90,6 +101,13 @@ async def dispatch_event(payload: dict[str, Any]) -> None:
         return
 
     channel = settings.slack_default_channel
+    owner_data = payload.get("entity", {}).get("owner", {})
+    
+    if owner_data:
+        owner_name = owner_data.get("name")
+        if owner_name and owner_name in OWNER_SLACK_MAP:
+            channel = OWNER_SLACK_MAP[owner_name]
+            logger.info("smart_routing", owner=owner_name, channel=channel)
 
     try:
         _post_slack_message(client, channel, blocks, fallback_text)

@@ -98,3 +98,56 @@ async def test_dispatch_event_uses_correct_emoji_for_event_type():
 
     call_kwargs = mock_client.chat_postMessage.call_args
     assert ":test_tube:" in call_kwargs.kwargs["text"]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_event_routes_to_owner():
+    """dispatch_event() routes to owner's mapped channel if owner exists."""
+    mock_client = MagicMock()
+    mock_client.chat_postMessage = MagicMock()
+
+    with patch("pulse.notifier._get_slack_client", return_value=mock_client), \
+         patch("pulse.notifier.settings") as mock_settings:
+        mock_settings.slack_bot_token = "xoxb-test-token"
+        mock_settings.slack_default_channel = "#default-channel"
+        mock_settings.om_server_url = "http://localhost:8585"
+
+        await dispatch_event({
+            "eventType": "entityCreated",
+            "entityType": "table",
+            "entityFullyQualifiedName": "sample.public.orders",
+            "entity": {
+                "owner": {"name": "nishanthatgit"}
+            }
+        })
+
+    mock_client.chat_postMessage.assert_called_once()
+    call_kwargs = mock_client.chat_postMessage.call_args
+    # "nishanthatgit" maps to "#data-engineering"
+    assert call_kwargs.kwargs["channel"] == "#data-engineering"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_event_fallback_to_default_channel():
+    """dispatch_event() falls back to default channel if owner not mapped or absent."""
+    mock_client = MagicMock()
+    mock_client.chat_postMessage = MagicMock()
+
+    with patch("pulse.notifier._get_slack_client", return_value=mock_client), \
+         patch("pulse.notifier.settings") as mock_settings:
+        mock_settings.slack_bot_token = "xoxb-test-token"
+        mock_settings.slack_default_channel = "#default-channel"
+        mock_settings.om_server_url = "http://localhost:8585"
+
+        await dispatch_event({
+            "eventType": "entityCreated",
+            "entityType": "table",
+            "entityFullyQualifiedName": "sample.public.orders",
+            "entity": {
+                "owner": {"name": "Unknown Owner"}
+            }
+        })
+
+    mock_client.chat_postMessage.assert_called_once()
+    call_kwargs = mock_client.chat_postMessage.call_args
+    assert call_kwargs.kwargs["channel"] == "#default-channel"
