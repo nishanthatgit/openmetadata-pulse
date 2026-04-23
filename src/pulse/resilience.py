@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 om_breaker = pybreaker.CircuitBreaker(
     fail_max=5,
     reset_timeout=60,
-    state_storage=pybreaker.CircuitMemoryStorage(),
+    state_storage=pybreaker.CircuitMemoryStorage(state=pybreaker.STATE_CLOSED),
     name="openmetadata",
 )
 
@@ -30,7 +30,7 @@ om_breaker = pybreaker.CircuitBreaker(
 slack_breaker = pybreaker.CircuitBreaker(
     fail_max=5,
     reset_timeout=60,
-    state_storage=pybreaker.CircuitMemoryStorage(),
+    state_storage=pybreaker.CircuitMemoryStorage(state=pybreaker.STATE_CLOSED),
     name="slack",
 )
 
