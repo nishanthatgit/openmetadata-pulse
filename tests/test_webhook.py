@@ -186,3 +186,67 @@ async def test_root_endpoint():
         resp = await client.get("/")
     assert resp.status_code == 200
     assert resp.json()["service"] == "openmetadata-pulse"
+
+
+# ---------------------------------------------------------------------------
+# Tests — event filtering
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_webhook_filters_ingestion_bot():
+    """Events updated by ingestion-bot are filtered out and return ignored status."""
+    payload = {
+        "eventType": "entityUpdated",
+        "entityType": "table",
+        "entityFullyQualifiedName": "sample.orders",
+        "updatedBy": "ingestion-bot",
+    }
+    mock_dispatch = AsyncMock()
+    with patch("pulse.webhook_receiver.dispatch_event", mock_dispatch):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post("/webhook", json=payload)
+            
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ignored"}
+    mock_dispatch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_webhook_filters_passing_dq():
+    """Passing data quality tests are filtered out."""
+    payload = {
+        "eventType": "testCaseResult",
+        "entityType": "testCase",
+        "entityFullyQualifiedName": "sample.orders.row_count",
+        "testCaseResult": {"testCaseStatus": "Success"},
+    }
+    mock_dispatch = AsyncMock()
+    with patch("pulse.webhook_receiver.dispatch_event", mock_dispatch):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post("/webhook", json=payload)
+            
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ignored"}
+    mock_dispatch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_webhook_filters_tier1():
+    """When tier1_only is enabled, events without Tier1 tag are filtered out."""
+    payload = {
+        "eventType": "entityUpdated",
+        "entityType": "table",
+        "entityFullyQualifiedName": "sample.orders",
+        "entity": {
+            "tags": [{"tagFQN": "Tier.Tier3"}]
+        }
+    }
+    mock_dispatch = AsyncMock()
+    with patch("pulse.webhook_receiver.dispatch_event", mock_dispatch), \
+         patch.dict("pulse.webhook_receiver.FILTER_RULES", {"tier1_only": True}):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post("/webhook", json=payload)
+            
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ignored"}
+    mock_dispatch.assert_not_called()

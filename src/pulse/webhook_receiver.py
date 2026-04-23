@@ -49,6 +49,41 @@ class OMChangeEvent(BaseModel, extra="allow"):
 
 
 # ---------------------------------------------------------------------------
+# Event Filtering Engine
+# ---------------------------------------------------------------------------
+
+FILTER_RULES = {
+    "tier1_only": False,
+    "skip_ingestion_bot": True,
+    "skip_passing_dq": True,
+}
+
+
+def should_dispatch(payload: dict[str, Any]) -> bool:
+    """Evaluate filtering rules to determine if an event should be dispatched."""
+    if FILTER_RULES.get("skip_ingestion_bot"):
+        if payload.get("updatedBy") == "ingestion-bot":
+            logger.info("event_filtered", reason="ingestion_bot")
+            return False
+
+    if FILTER_RULES.get("skip_passing_dq"):
+        if payload.get("eventType") == "testCaseResult":
+            status = payload.get("testCaseResult", {}).get("testCaseStatus")
+            if status == "Success":
+                logger.info("event_filtered", reason="passing_dq")
+                return False
+
+    if FILTER_RULES.get("tier1_only"):
+        tags = payload.get("entity", {}).get("tags", [])
+        has_tier1 = any(tag.get("tagFQN", "").startswith("Tier.Tier1") for tag in tags)
+        if not has_tier1:
+            logger.info("event_filtered", reason="not_tier1")
+            return False
+
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Webhook endpoint
 # ---------------------------------------------------------------------------
 
@@ -76,6 +111,9 @@ async def receive_webhook(request: Request) -> dict[str, str]:
         entity_type=event.entityType,
         fqn=event.entityFullyQualifiedName,
     )
+
+    if not should_dispatch(body):
+        return {"status": "ignored"}
 
     try:
         await dispatch_event(event.model_dump())
