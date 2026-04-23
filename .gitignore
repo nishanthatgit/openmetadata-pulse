@@ -38,6 +38,10 @@ htmlcov/
 node_modules/
 ui/dist/
 
+# Local test scripts (not for repo)
+get_om_token.py
+test_slack.py
+
 # OS
 .DS_Store
 Thumbs.db
